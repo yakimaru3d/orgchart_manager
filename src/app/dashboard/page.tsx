@@ -1,13 +1,14 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import ProtectedRoute from '@/components/auth/protected-route';
+import { useAuth } from '@/contexts/auth-context';
 import DashboardLayout from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, GitBranch, UserCheck, Building } from 'lucide-react';
 
 export default function Dashboard() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
 
   const stats = [
     {
@@ -68,13 +69,14 @@ export default function Dashboard() {
   ];
 
   return (
-    <DashboardLayout>
+    <ProtectedRoute>
+      <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
           <p className="text-gray-600">
-            おかえりなさい、{session?.user?.name}さん
+            おかえりなさい、{user?.email}さん
           </p>
         </div>
 
@@ -172,5 +174,6 @@ export default function Dashboard() {
         </div>
       </div>
     </DashboardLayout>
+    </ProtectedRoute>
   );
 }

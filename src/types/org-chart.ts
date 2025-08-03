@@ -10,6 +10,14 @@ export interface OrgNode {
   level: number;
   parentId?: string;
   children?: OrgNode[];
+  type?: 'employee' | 'recruitment_plan';
+  recruitmentData?: {
+    estimated_salary: number;
+    target_hire_date: string;
+    urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    status: 'PLANNED' | 'APPROVED' | 'IN_PROGRESS' | 'HIRED' | 'CANCELLED';
+    required_skills: string[];
+  };
 }
 
 export interface OrgChartData {
@@ -21,7 +29,7 @@ export interface OrgEdge {
   id: string;
   source: string;
   target: string;
-  type: 'reports-to';
+  type: 'reports-to' | 'future-reports-to';
 }
 
 export interface OrgChartViewOptions {

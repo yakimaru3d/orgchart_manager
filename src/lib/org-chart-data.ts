@@ -1,8 +1,7 @@
 import { OrgNode, OrgChartData, OrgEdge } from '@/types/org-chart';
 import { Employee, Department } from '@/types/employee';
-import { mockEmployees, mockDepartments } from './mock-data';
 
-export function generateOrgChartData(employees: Employee[] = mockEmployees): OrgChartData {
+export function generateOrgChartData(employees: Employee[]): OrgChartData {
   // Create org nodes from employees
   const nodes: OrgNode[] = employees.map(employee => ({
     id: employee.id,

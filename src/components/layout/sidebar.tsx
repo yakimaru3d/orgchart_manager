@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -15,23 +16,29 @@ import {
   LogOut,
   Menu,
   X,
+  UserPlus,
+  Network,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'ダッシュボード', href: '/dashboard', icon: BarChart3 },
   { name: '従業員', href: '/employees', icon: Users },
   { name: '組織図', href: '/org-chart', icon: GitBranch },
+  { name: '採用計画', href: '/recruitment', icon: UserPlus },
+  { name: '統合組織図', href: '/unified-org-chart', icon: Network },
   { name: 'レポート', href: '/reports', icon: BarChart3 },
   { name: '設定', href: '/settings', icon: Settings },
 ];
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-  const { data: session } = useSession();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/auth/signin' });
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/auth/signin');
   };
 
   return (
@@ -95,17 +102,17 @@ export default function Sidebar() {
           <div className="p-4 border-t">
             <div className="flex items-center space-x-3 mb-3">
               <Avatar>
-                <AvatarImage src={session?.user?.image || ''} />
+                <AvatarImage src={''} />
                 <AvatarFallback>
-                  {session?.user?.name?.charAt(0) || 'U'}
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {session?.user?.name}
+                  {user?.email || 'ユーザー'}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
-                  {(session?.user as any)?.role}
+                  MVPユーザー
                 </p>
               </div>
             </div>

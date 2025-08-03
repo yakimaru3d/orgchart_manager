@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "mcp__context7__get-library-docs",
+      "Bash(npm run setup-sample-data:*)",
+      "Bash(npx supabase:*)"
+    ],
+    "deny": []
+  }
+}

@@ -1,93 +1,81 @@
-import { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
-import { UserRole } from '@/types/auth';
+import { supabase } from './supabase';
+import type { User } from '@supabase/supabase-js';
 
-// Mock user data - replace with database queries
-const mockUsers = [
-  {
-    id: '1',
-    email: 'admin@company.com',
-    name: 'System Admin',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    role: 'SYSTEM_ADMIN' as UserRole,
-  },
-  {
-    id: '2',
-    email: 'hr@company.com',
-    name: 'HR Manager',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    role: 'HR_MANAGER' as UserRole,
-  },
-  {
-    id: '3',
-    email: 'manager@company.com',
-    name: 'Department Manager',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    role: 'DEPARTMENT_MANAGER' as UserRole,
-  },
-  {
-    id: '4',
-    email: 'employee@company.com',
-    name: 'Employee',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    role: 'EMPLOYEE' as UserRole,
-  },
-];
+export interface AuthUser {
+  id: string;
+  email: string;
+  tenantId: string;
+}
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+export class AuthService {
+  // ユーザーのサインアップ
+  static async signUp(email: string, password: string): Promise<{ user: User | null; error: any }> {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-        const user = mockUsers.find(user => user.email === credentials.email);
-        
-        if (!user) {
-          return null;
-        }
+      if (error) throw error;
+      return { user: data.user, error: null };
+    } catch (error) {
+      return { user: null, error };
+    }
+  }
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-        
-        if (!isPasswordValid) {
-          return null;
-        }
+  // ユーザーのサインイン
+  static async signIn(email: string, password: string): Promise<{ user: User | null; error: any }> {
+    try {
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = (user as any).role;
+      if (error) {
+        console.error('❌ Sign in error:', error);
+        throw error;
       }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.sub!;
-        (session.user as any).role = token.role;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: '/auth/signin',
-  },
-  session: {
-    strategy: 'jwt',
-  },
-};
+      
+      return { user: data.user, error: null };
+    } catch (error) {
+      console.error('❌ Sign in exception:', error);
+      return { user: null, error };
+    }
+  }
+
+  // サインアウト
+  static async signOut(): Promise<{ error: any }> {
+    try {
+      const { error } = await supabase.auth.signOut();
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  }
+
+  // 現在のユーザーを取得
+  static async getCurrentUser(): Promise<User | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  }
+
+  // 認証状態の監視
+  static onAuthStateChange(callback: (user: User | null) => void) {
+    return supabase.auth.onAuthStateChange((event, session) => {
+      callback(session?.user || null);
+    });
+  }
+
+  // ユーザーのテナントIDを取得（MVPでは固定値を使用）
+  static getTenantId(user: User | null): string {
+    // MVPでは実際にデータベースに登録されているテナントIDを使用
+    // 本格実装ではユーザーメタデータやテナント管理テーブルから取得
+    return 'a1b2c3d4-e5f6-4789-9012-123456789abc';
+  }
+}

@@ -20,7 +20,8 @@ import {
   Palette, 
   Database,
   Save,
-  Upload
+  Upload,
+  Download
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -38,7 +39,7 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     // In a real app, this would save the settings
-    console.log('Saving settings...');
+    // Save settings logic here
   };
 
   return (

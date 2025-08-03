@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { OrgNode, OrgChartViewOptions } from '@/types/org-chart';
-import { OrgVersion, CreateVersionOptions } from '@/types/version';
+import { CreateVersionOptions } from '@/types/version';
 import { generateOrgChartData, getEmployeesByDepartment } from '@/lib/org-chart-data';
-import { mockEmployees, mockDepartments } from '@/lib/mock-data';
 import { useVersionManager } from '@/hooks/use-version-manager';
+import { useEmployees } from '@/hooks/use-employees';
+import { useDepartments } from '@/hooks/use-departments';
 import DashboardLayout from '@/components/layout/dashboard-layout';
 import OrgChart from '@/components/org-chart/org-chart';
 import VersionTimeline from '@/components/version/version-timeline';
@@ -24,10 +25,17 @@ import {
   Layers,
   Mail,
   GitBranch,
-  Clock,
   Play,
   Save
 } from 'lucide-react';
+
+// Constants
+const TAB_OPTIONS = {
+  CHART: 'chart' as const,
+  VERSIONS: 'versions' as const,
+  SIMULATION: 'simulation' as const,
+};
+
 
 export default function OrgChartPage() {
   const [selectedNode, setSelectedNode] = useState<OrgNode | null>(null);
@@ -35,8 +43,12 @@ export default function OrgChartPage() {
     viewType: 'full',
     showInactiveEmployees: false,
   });
-  const [activeTab, setActiveTab] = useState<'chart' | 'versions' | 'simulation'>('chart');
+  const [activeTab, setActiveTab] = useState<keyof typeof TAB_OPTIONS>(TAB_OPTIONS.CHART);
   const [showCreateVersion, setShowCreateVersion] = useState(false);
+  
+  // 実際の従業員データと部門データを取得
+  const { employees, loading: employeesLoading, error: employeesError } = useEmployees();
+  const { departments, loading: departmentsLoading, error: departmentsError } = useDepartments();
   
   const {
     versions,
@@ -50,14 +62,16 @@ export default function OrgChartPage() {
     deleteVersion,
     exportVersion,
     clearComparison,
-    loadAllVersions
   } = useVersionManager();
   
-  const orgData = useMemo(() => generateOrgChartData(mockEmployees, mockDepartments), []);
+  const orgData = useMemo(() => {
+    if (employees.length === 0) return { nodes: [], edges: [] };
+    return generateOrgChartData(employees);
+  }, [employees]);
   
   // Filter data based on view options
   const filteredData = useMemo(() => {
-    let filteredEmployees = mockEmployees.filter(emp => 
+    let filteredEmployees = employees.filter(emp => 
       viewOptions.showInactiveEmployees || emp.isActive
     );
 
@@ -67,7 +81,7 @@ export default function OrgChartPage() {
     }
     
     if (viewOptions.levelFilter) {
-      const levelData = generateOrgChartData(filteredEmployees, mockDepartments);
+      const levelData = generateOrgChartData(filteredEmployees);
       filteredEmployees = filteredEmployees.filter(emp => {
         const node = levelData.nodes.find(n => n.id === emp.id);
         return node && node.level === viewOptions.levelFilter;
@@ -84,18 +98,18 @@ export default function OrgChartPage() {
       );
     }
 
-    return generateOrgChartData(filteredEmployees, mockDepartments);
-  }, [viewOptions]);
+    return generateOrgChartData(filteredEmployees);
+  }, [employees, viewOptions]);
 
-  const departments = useMemo(() => {
-    return mockDepartments.filter(dept => dept.isActive).map(dept => dept.name);
-  }, []);
+  const departmentNames = useMemo(() => {
+    return departments.filter(dept => dept.isActive).map(dept => dept.name);
+  }, [departments]);
 
   const stats = useMemo(() => {
     const totalEmployees = orgData.nodes.length;
     const totalManagers = orgData.nodes.filter(node => node.isManager).length;
-    const totalDepartments = departments.length;
-    const maxLevel = Math.max(...orgData.nodes.map(node => node.level));
+    const totalDepartments = departmentNames.length;
+    const maxLevel = orgData.nodes.length > 0 ? Math.max(...orgData.nodes.map(node => node.level)) : 0;
     
     return {
       totalEmployees,
@@ -103,7 +117,7 @@ export default function OrgChartPage() {
       totalDepartments,
       maxLevel,
     };
-  }, [orgData.nodes, departments]);
+  }, [orgData.nodes, departmentNames]);
 
   const handleNodeClick = (node: OrgNode) => {
     setSelectedNode(node);
@@ -111,8 +125,36 @@ export default function OrgChartPage() {
 
   const handleExport = () => {
     // In a real app, this would export the chart as PDF or image
-    console.log('Exporting org chart...');
+    // Export chart as PDF or image
   };
+
+  // ローディング状態の表示
+  if (employeesLoading || departmentsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">組織図データを読み込み中...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // エラー状態の表示
+  if (employeesError || departmentsError) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">データの読み込みに失敗しました</p>
+            <p className="text-gray-600">{employeesError || departmentsError}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -130,9 +172,9 @@ export default function OrgChartPage() {
             {/* タブナビゲーション */}
             <div className="flex border rounded-lg p-1 bg-gray-50">
               <button
-                onClick={() => setActiveTab('chart')}
+                onClick={() => setActiveTab(TAB_OPTIONS.CHART)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  activeTab === 'chart' 
+                  activeTab === TAB_OPTIONS.CHART 
                     ? 'bg-white text-gray-900 shadow-sm' 
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -140,9 +182,9 @@ export default function OrgChartPage() {
                 組織図
               </button>
               <button
-                onClick={() => setActiveTab('versions')}
+                onClick={() => setActiveTab(TAB_OPTIONS.VERSIONS)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  activeTab === 'versions' 
+                  activeTab === TAB_OPTIONS.VERSIONS 
                     ? 'bg-white text-gray-900 shadow-sm' 
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -151,9 +193,9 @@ export default function OrgChartPage() {
                 バージョン
               </button>
               <button
-                onClick={() => setActiveTab('simulation')}
+                onClick={() => setActiveTab(TAB_OPTIONS.SIMULATION)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  activeTab === 'simulation' 
+                  activeTab === TAB_OPTIONS.SIMULATION 
                     ? 'bg-white text-gray-900 shadow-sm' 
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -163,7 +205,7 @@ export default function OrgChartPage() {
               </button>
             </div>
             
-            {activeTab === 'chart' && (
+            {activeTab === TAB_OPTIONS.CHART && (
               <>
                 <Select 
                   value={viewOptions.viewType} 
@@ -193,7 +235,7 @@ export default function OrgChartPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">すべての部署</SelectItem>
-                      {departments.map(dept => (
+                      {departmentNames.map(dept => (
                         <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                       ))}
                     </SelectContent>
@@ -207,7 +249,7 @@ export default function OrgChartPage() {
               </>
             )}
             
-            {activeTab === 'versions' && (
+            {activeTab === TAB_OPTIONS.VERSIONS && (
               <Button onClick={() => setShowCreateVersion(true)}>
                 <Save className="mr-2 h-4 w-4" />
                 バージョン作成
@@ -405,7 +447,7 @@ export default function OrgChartPage() {
               <VersionTimeline
                 versions={versions}
                 currentVersionId={currentVersion?.metadata.id}
-                onViewVersion={(version) => console.log('View version:', version.metadata.name)}
+                onViewVersion={() => {}}
                 onRestoreVersion={async (version) => {
                   await restoreVersion({
                     targetVersionId: version.metadata.id,
@@ -461,10 +503,10 @@ export default function OrgChartPage() {
         <CreateVersionDialog
           open={showCreateVersion}
           onOpenChange={setShowCreateVersion}
-          employees={mockEmployees}
-          departments={mockDepartments}
+          employees={employees}
+          departments={departments}
           onCreateVersion={async (options: CreateVersionOptions) => {
-            await createVersion(mockEmployees, mockDepartments, options);
+            await createVersion(employees, departments, options);
           }}
           isLoading={isLoading}
         />

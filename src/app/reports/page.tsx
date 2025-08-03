@@ -64,12 +64,12 @@ export default function ReportsPage() {
 
   const handleGenerateReport = () => {
     // In a real app, this would generate and download the report
-    console.log(`Generating ${selectedReportType} report in ${selectedFormat} format`);
+    // Generate report logic here
   };
 
-  const handleDownloadReport = (reportName: string) => {
+  const handleDownloadReport = () => {
     // In a real app, this would download the specific report
-    console.log(`Downloading: ${reportName}`);
+    // Download logic here
   };
 
   return (

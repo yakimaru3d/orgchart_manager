@@ -19,6 +19,7 @@ import '@xyflow/react/dist/style.css';
 
 import { OrgNode, OrgChartData } from '@/types/org-chart';
 import OrgChartNode from './org-chart-node';
+import RecruitmentNode from './recruitment-node';
 
 interface OrgChartProps {
   data: OrgChartData;
@@ -27,6 +28,7 @@ interface OrgChartProps {
 
 const nodeTypes: NodeTypes = {
   orgNode: OrgChartNode,
+  recruitmentNode: RecruitmentNode,
 };
 
 export default function OrgChart({ data, onNodeClick }: OrgChartProps) {
@@ -34,7 +36,7 @@ export default function OrgChart({ data, onNodeClick }: OrgChartProps) {
   const flowNodes: Node[] = useMemo(() => {
     return data.nodes.map((node, index) => ({
       id: node.id,
-      type: 'orgNode',
+      type: node.type === 'recruitment_plan' ? 'recruitmentNode' : 'orgNode',
       position: {
         x: (index % 4) * 300 + 50, // Simple grid layout
         y: node.level * 200 + 50,
@@ -50,14 +52,15 @@ export default function OrgChart({ data, onNodeClick }: OrgChartProps) {
       source: edge.source,
       target: edge.target,
       type: 'smoothstep',
-      animated: false,
+      animated: edge.type === 'future-reports-to',
       style: {
-        stroke: '#6366f1',
+        stroke: edge.type === 'future-reports-to' ? '#3b82f6' : '#6366f1',
         strokeWidth: 2,
+        strokeDasharray: edge.type === 'future-reports-to' ? '5,5' : 'none',
       },
       markerEnd: {
         type: 'arrowclosed',
-        color: '#6366f1',
+        color: edge.type === 'future-reports-to' ? '#3b82f6' : '#6366f1',
       },
     }));
   }, [data.edges]);
